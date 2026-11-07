@@ -9,6 +9,7 @@ const {
   TimeoutError,
   AuthError,
 } = require("./errors");
+const { mapBackendApiError } = require("./backendCodes");
 const utils = require("./utils");
 const { skillName } = require("./name");
 
@@ -52,10 +53,9 @@ async function request(options, data = null) {
               } else {
                 finish(
                   reject,
-                  new ApiError(
-                    jsonBody.errcode.toString(),
+                  mapBackendApiError(
+                    jsonBody.errcode,
                     jsonBody.errmsg || "请求失败",
-                    jsonBody.errcode >= 10,
                   ),
                 );
               }
@@ -158,7 +158,7 @@ async function getJson(path, params, token) {
  * 创建任务。网络、超时、429、5xx，以及 errcode < 10 会重试。
  * 这些小于 10 的码都出现在插入成功之前：搜索 1、作品/评论 2 是提交过密；
  * 作品/评论 1 是查价失败；搜索 2、作品/评论 3 是插入失败。成功插入只返回 0，不会重试。
- * errcode >= 10 不重试：包月上限 14；搜索的 15 是查价失败、16 是余额不足；作品和评论的 15 是余额不足。
+ * errcode >= 10 不重试：包月上限 14→PLAN_LIMIT；搜索的 15 是查价失败、16 是余额不足；作品和评论的 15 是余额不足。
  * @param {string} method
  * @param {string} path
  * @param {object} params

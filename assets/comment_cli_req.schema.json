@@ -13,7 +13,7 @@
         },
         "limit": {
             "type": "integer",
-            "description": "获取数量。包月 TOKEN 超过 40 时接口返回 errcode 14",
+            "description": "获取数量。技能硬上限 10000（按量）。包月 Token 超过 40 返回 PLAN_LIMIT（后端 errcode 14）",
             "minimum": 1,
             "maximum": 10000,
             "default": 10

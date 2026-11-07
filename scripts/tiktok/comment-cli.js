@@ -52,7 +52,7 @@ function printHelp() {
       "  - 这是视频链接或纯数字 aweme_id，不是博主主页，也不是 MS4w 开头的 sec_uid\n" +
       "  - vm、vt、/t/ 短链和 /photo/ 图文链接不能用，请换成标准视频链接或数字 id\n" +
       "  - 数量若不在允许范围内，命令会直接失败，不会改成默认值后继续请求\n" +
-      "  - 包月 TOKEN 最多 40 条，超出后接口返回 errcode 14\n",
+      "  - 数量 1-10000；包月 Token 实际最多 40，超限返回 PLAN_LIMIT\n",
   );
 }
 

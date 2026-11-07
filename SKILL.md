@@ -2,7 +2,7 @@
 name: tiktok-data-research
 description: "TikTok数据智能助手。自媒体从业者的数据获取工具，提供TikTok搜索、作品获取、实时评论数据等实时数据的批量获取，为后续的内容研究、选题分析、用户痛点、数据分析、市场调研、对标账号监控、舆情分析、TikTok增长等场景提供真实可靠的数据支撑。提供3个能力①关键词搜索（可按点赞/相关度排序、发布时间筛选）②博主作品获取，按主页链接或用户名批量获取公开作品列表，支持最新/最热排序 ③视频评论抓取，按视频链接或作品 ID 获取评论内容、评论者与互动数据，输出结构化 JSON（含作者、互动数据、标签、链接）。"
 license: MIT
-version: "1.1.0"
+version: 1.1.1
 display_name: 🎯TikTok数据智能助手
 display_name_en: TikTok Data Research
 description_zh: TikTok数据智能助手。自媒体从业者的数据获取工具，提供TikTok搜索、作品获取、实时评论数据等实时数据的批量获取，为后续的内容研究、选题分析、用户痛点、数据分析、市场调研、对标账号监控、舆情分析、TikTok增长等场景提供真实可靠的数据支撑。
@@ -23,7 +23,7 @@ metadata:
     bins: ["node"]
     env: ["GUAIKEI_API_TOKEN"]
   env_desc:
-    GUAIKEI_API_TOKEN: "TikTok 数据 API 访问令牌。未配置时无法调用接口；可通过 https://www.guaikei.com 开通，或联系开发者（微信 13395823479，备注：TikTok 技能）。"
+    GUAIKEI_API_TOKEN: "TikTok 数据 API 访问令牌。未配置时无法调用接口；可通过 https://www.guaikei.com 开通并获取支持。"
   keywords:
     - "TikTok"
     - "tiktok"
@@ -97,6 +97,7 @@ metadata:
     - "market-research"
     - "data-scraping"
     - "api-wrapper"
+    - "tiktok"
   schemas:
     - name: "输出信封"
       file: "assets/output_envelope.schema.json"
@@ -137,7 +138,7 @@ metadata:
 
 ## 0. 🧭 每次按这个顺序执行
 
-1. 确认环境变量 `GUAIKEI_API_TOKEN` 已配置。没有配置时直接告诉用户去 [TikTok关键词搜索SKILL官网](https://www.guaikei.com) 开通，不要先跑一遍试探。
+1. 确认环境变量 `GUAIKEI_API_TOKEN` 已配置。没有配置时直接告诉用户去 [TikTok数据智能助手官网](https://www.guaikei.com) 开通，不要先跑一遍试探。
 2. 在本技能根目录执行 `node scripts/tiktok/<命令>.js`。
 3. stderr 出现「处理中」表示任务还在跑。等进程自己退出，再读 stdout 的最后一份 JSON。不要把 stderr 或整份 JSON 念给用户。
 4. 按「4. 📦 读结果」的退出码表决定：改参数再试、告诉用户，或停止。
@@ -147,7 +148,7 @@ metadata:
 同一组参数再次执行时，服务端会复用还没过期的任务：搜索大约 9 分钟内，作品和评论大约 20 分钟内，不会另开一条。搜索如果已经等到 `TIMEOUT`，9 分钟的复用窗口通常已经过去，立刻重跑可能新建一条任务。
 
 - 没有关键词或链接就先问，不要编造
-- 搜索不传 `--limit` 是 10 条。用户说「全部」再加大，不要自行抓 10000 条
+- 搜索不传 `--limit` 是 10 条。用户说「全部」再加大，不要自行抓 10000 条。**包月 Token** 搜索/作品勿超 30、评论勿超 40，否则 `PLAN_LIMIT`
 - `status=empty` 且退出码 0 是「接口已经完成，没有结果」，不是命令失败
 - 搜索若一直处理中直到 `TIMEOUT`，可能是没有可保存的结果。告诉用户换关键词或稍后再试，不要立刻连打
 
@@ -195,6 +196,8 @@ metadata:
 
 枚举和数量不在允许范围内时，命令直接失败（退出码 2，`INVALID_ARGS`），不会改成默认值再请求。三个命令都支持 `--help` / `-h`：帮助打在 stderr，退出码 0，stdout 为空。短参数大小写都可以。含空格的关键词用双引号包成一个参数。关键词以 `-` 开头时写成 `--keyword=-AI`，或 `node scripts/tiktok/search-cli.js -- -AI`。完整字段见 `assets/*_cli_req.schema.json` 与 [references/options.md](references/options.md)。
 
+**套餐双上限（重要）**：技能侧硬上限为 10000（按量 Token）。**包月 Token** 超限会返回 `PLAN_LIMIT`（后端 errcode 14），不要当网络错误重试：搜索/作品最多 **30**，评论最多 **40**。具体以官网与本次 `message` 为准。
+
 ### 3.1 🔍 关键词搜索
 
 | 参数 | 必填 | 取值 | 默认 |
@@ -202,7 +205,7 @@ metadata:
 | `--keyword` `-k` | 是 | 1–100 个字符，不能是链接，不含 `< > " '` | — |
 | `--sort` `-s` | 否 | `0` 相关度 / `1` 最多点赞 | `0` |
 | `--time` `-t` | 否 | `0` 全部 / `1` 近 1 日 / `7` 近 7 日 / `30` 近 1 月 / `90` 近 3 月 / `180` 近 6 月 | `0` |
-| `--limit` `-l` | 否 | 整数 1–10000。包月 TOKEN 超过 30 会失败 | `10` |
+| `--limit` `-l` | 否 | 整数 1–10000（**包月 Token 实际最多 30**） | `10` |
 
 ### 3.2 🦸 博主作品
 
@@ -210,14 +213,14 @@ metadata:
 | --- | --- | --- | --- |
 | `--url` `-u` | 是 | 主页链接、`@用户名` 或整段 `sec_uid`，最长 255 | — |
 | `--sort` `-s` | 否 | `0` 最新 / `1` 最热 | `0` |
-| `--limit` `-l` | 否 | 整数 1–10000。包月 TOKEN 超过 30 会失败 | `10` |
+| `--limit` `-l` | 否 | 整数 1–10000（**包月最多 30**） | `10` |
 
 ### 3.3 💬 视频评论
 
 | 参数 | 必填 | 取值 | 默认 |
 | --- | --- | --- | --- |
 | `--url` `-u` | 是 | 视频链接或纯数字 `aweme_id`，最长 255 | — |
-| `--limit` `-l` | 否 | 整数 1–10000。包月 TOKEN 超过 40 会失败 | `10` |
+| `--limit` `-l` | 否 | 整数 1–10000（**包月最多 40**） | `10` |
 
 ## 4. 📦 读结果
 
@@ -230,7 +233,7 @@ metadata:
   "message": "搜索任务完成",
   "timestamp": "2026/10/26 16:20:00",
   "request": { "command": "search", "keyword": "AI", "sort": 1, "time": 0, "limit": 20 },
-  "metadata": { "skill_version": "1.1.0", "runtime_version": "22.22.2", "execution_time": 8421 },
+  "metadata": { "skill_version": "1.1.1", "runtime_version": "22.22.2", "execution_time": 8421 },
   "results": [{ "aweme_id": "123", "desc": "...", "digg_count": 100 }]
 }
 ```
@@ -252,7 +255,7 @@ metadata:
 | 3 | `AUTH_REQUIRED` / `AUTH_ERROR` | 停止重试，让用户配置 `GUAIKEI_API_TOKEN` |
 | 1 | `TIMEOUT` | 任务仍在处理，搜索也可能是没有可保存的结果。不要立刻重跑。搜索的复用窗口大约只有 9 分钟，等满超时后再跑可能新建一条任务 |
 | 1 | `NETWORK_ERROR` / `HTTP_5xx` / `HTTP_429` | 命令内部已经重试过。退出后再失败就告诉用户稍后再试 |
-| 1 | `"14"` | 包月条数超限。搜索和作品降到 30 及以下，评论降到 40 及以下，再试一次 |
+| 1 | `PLAN_LIMIT` | 套餐单次条数超限（常见于包月）。**禁止同参重试**。转述 `message`；可建议降 `--limit`（搜索/作品≤30，评论≤40）或到官网升级按量；**须用户同意后再跑** |
 | 1 | `"16"`（搜索）或 `"15"`（作品、评论） | 余额不足。转告 `message`，不要改参数连打 |
 | 1 | `"1"` 或 `"2"` | 提交过于密集。等一会儿再试，不要改成另一组参数立刻连打 |
 | 1 | 其它十进制数字 | 把 `message` 原样转告 |
@@ -266,4 +269,4 @@ metadata:
 
 成功结果默认不写文件。需要留底时设置 `TT_GUAIKEI_ENABLE_LOG=1`，文件写到系统临时目录的 `tiktok-guaikei/logs/`。POSIX 上权限是仅当前用户可读写；Windows 不使用这组权限位，靠临时目录本身的用户隔离。
 
-开通 token 或人工支持：[TikTok 实时数据获取技能官网](https://www.guaikei.com) ，微信 `13395823479`（备注：TikTok 技能）。
+开通 token 或更多帮助：[TikTok数据智能助手官网](https://www.guaikei.com)。

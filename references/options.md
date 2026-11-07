@@ -1,8 +1,10 @@
-# TikTok数据智能助手 技能 · 完整参数说明
+# TikTok数据智能助手 完整选项参数说明
 
 所有命令在技能根目录执行。stdout 是一份 JSON 信封，日志在 stderr。字段以 `assets/*.schema.json` 为准。
 
 非法的 `--sort`、`--time`、`--limit` 会直接失败（退出码 2），不会改成默认值再请求。
+
+**套餐双上限**：技能硬上限 10000（按量）。包月 Token 超限返回 `PLAN_LIMIT`（后端 errcode 14）：搜索/作品 ≤30，评论 ≤40。不要当网络错误同参重试。
 
 ## 1. 关键词搜索 `search-cli.js`
 
@@ -15,7 +17,7 @@ node scripts/tiktok/search-cli.js --keyword "AI model" --sort 1 --time 7 --limit
 | `--keyword` | `-k` | 1–100 个字符；不能是链接；不含 `< > " '` | 必填 |
 | `--sort` | `-s` | `0` 相关度 / `1` 最多点赞 | `0` |
 | `--time` | `-t` | `0` 全部 / `1` 近 1 日 / `7` 近 7 日 / `30` 近 1 月 / `90` 近 3 月 / `180` 近 6 月 | `0` |
-| `--limit` | `-l` | 整数 1–10000。包月 TOKEN 超过 30 返回 errcode `14` | `10` |
+| `--limit` | `-l` | 整数 1–10000（**包月 Token 实际最多 30**） | `10` |
 
 搜索没有「最新发布」排序。`--time 2` 会失败。
 
@@ -36,7 +38,7 @@ node scripts/tiktok/post-cli.js --url "MS4wLjABAAAA..." --sort 1 --limit 20
 | --- | --- | --- | --- |
 | `--url` | `-u` | 主页、`@用户名` 或整段 `MS4w` 开头的 sec_uid | 必填 |
 | `--sort` | `-s` | `0` 最新 / `1` 最热 | `0` |
-| `--limit` | `-l` | 整数 1–10000。包月 TOKEN 超过 30 返回 errcode `14` | `10` |
+| `--limit` | `-l` | 整数 1–10000（**包月最多 30**） | `10` |
 
 `http` 会改成 `https`，`tiktok.com` 和 `m.tiktok.com` 会补成 `www.tiktok.com`，query 会去掉。视频链接、纯数字作品 id、`vm` / `vt` / `/t/` 短链会直接失败。
 
@@ -54,7 +56,7 @@ node scripts/tiktok/comment-cli.js --url 1234567890123456789 --limit 40
 | 参数 | 缩写 | 取值 | 默认 |
 | --- | --- | --- | --- |
 | `--url` | `-u` | `/video/数字id` 或纯数字 `aweme_id` | 必填 |
-| `--limit` | `-l` | 整数 1–10000。包月 TOKEN 超过 40 返回 errcode `14` | `10` |
+| `--limit` | `-l` | 整数 1–10000（**包月最多 40**） | `10` |
 
 主页、sec_uid、短链、`/photo/` 会直接失败。没有 IP 归属地字段。
 
@@ -71,7 +73,7 @@ node scripts/tiktok/comment-cli.js --url 1234567890123456789 --limit 40
   "message": "搜索任务完成",
   "timestamp": "2026/10/26 16:20:00",
   "request": { "command": "search", "keyword": "AI", "sort": 1, "time": 0, "limit": 20 },
-  "metadata": { "skill_version": "1.1.0", "runtime_version": "22.22.2", "execution_time": 8421 },
+  "metadata": { "skill_version": "1.1.1", "runtime_version": "22.22.2", "execution_time": 8421 },
   "results": []
 }
 ```
